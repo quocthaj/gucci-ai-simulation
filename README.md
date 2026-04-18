@@ -83,5 +83,4 @@ gucci-ai-simulation/
 - CHRO persona giữ đúng vai trong mọi tình huống
 - Supervisor Agent phát hiện user bị stuck sau 3 turns
 - Dynamic prompt injection — hint tự nhiên không lộ ra ngoài
-- Token usage tracking mỗi turn
 - Tự động detect ngôn ngữ — trả lời tiếng Việt hoặc tiếng Anh
