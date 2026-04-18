@@ -56,11 +56,6 @@ curl -X POST http://127.0.0.1:8000/chat \
     "injection_fired": false
   },
   "safety_flags": [],
-  "token_usage": {
-    "prompt_tokens": 312,
-    "response_tokens": 198,
-    "total_tokens": 510
-  }
 }
 ```
 
