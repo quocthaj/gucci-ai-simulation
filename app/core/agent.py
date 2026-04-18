@@ -152,7 +152,6 @@ Current session state: {state_context}
     def run(self, user_message: str) -> NPCResponse:
         # 1. Semantic Router
         intent = self.supervisor.classify_intent(user_message)
-        
         # 2. Cache / Rule-based (Short-circuit for Low Intent)
         if intent == "low_intent":
             for kw, rule_resp in self.LOW_INTENT_RULES.items():
@@ -162,7 +161,6 @@ Current session state: {state_context}
                         state_update=self.state,
                         safety_flags=self._check_safety(user_message)
                     )
-
         # 3. High Intent Flow (RAG + Large LLM)
         safety_flags = self._check_safety(user_message)
         injection = None
@@ -172,25 +170,20 @@ Current session state: {state_context}
                 last_topic=self.state.last_topic
             )
             self.state.injection_fired = True
-
         # RAG Layer: Retrieve context from documents
         retrieved_context = rag_service.retrieve_context(user_message)
-        
         system_prompt = self._build_system_prompt(injection, retrieved_context)
         history = self.memory.load_memory_variables({}).get("history", [])
-
         response = llm_call(
             system=system_prompt,
             history=history,
             user_message=user_message
         )
-
         self.memory.save_context(
             {"input": user_message},
             {"output": response}
         )
         self._update_state(user_message, response)
-
         return NPCResponse(
             assistant_message=response,
             state_update=self.state,
