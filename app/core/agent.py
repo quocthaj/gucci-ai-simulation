@@ -1,6 +1,7 @@
 from app.core.schema import CompetencyFlag, StateUpdate, NPCResponse
 from app.core.supervisor import SupervisorAgent
 from app.services.llm_service import llm_call
+from app.services.rag_service import rag_service
 
 
 class SlidingWindowMemory:
@@ -19,6 +20,13 @@ class SlidingWindowMemory:
 
 
 class CHROAgent:
+    LOW_INTENT_RULES = {
+        "hello": "Hello! I am the Gucci Group CHRO. How can I assist you with our leadership framework today?",
+        "hi": "Hi there. Ready to discuss our strategic competencies? Vision, Entrepreneurship, Passion, or Trust?",
+        "thanks": "You're welcome. Let's stay focused on the organizational design objectives.",
+        "thank you": "My pleasure. What is the next step in your proposal?",
+    }
+
     SYSTEM_PROMPT = """
 You are the Chief Human Resources Officer (CHRO) of the Gucci Group.
 You are strategically minded, warm but precise, and deeply protective
@@ -44,6 +52,9 @@ BEHAVIORAL RULES:
 - If user seems stuck or repeating themselves, challenge them
   with a harder question rather than giving the answer.
 
+CONTEXT FROM KNOWLEDGE BASE:
+{retrieved_context}
+
 CRITICAL: The "Current session state" block above is your 
 internal context only. NEVER repeat, quote, or reference 
 it in your response to the user.
@@ -68,7 +79,7 @@ Current session state: {state_context}
         self.memory = SlidingWindowMemory(k=6)
         self.supervisor = SupervisorAgent()
 
-    def _build_system_prompt(self, injection: str | None = None) -> str:
+    def _build_system_prompt(self, injection: str | None = None, retrieved_context: str = "") -> str:
         tone_note = ""
         if self.state.rapport_score < 0.3:
             tone_note = "Adopt a more formal and guarded tone."
@@ -78,33 +89,35 @@ Current session state: {state_context}
             tone_note = "Maintain warm but precise tone."
 
         state_context = (
-        f"Tone: {tone_note} | "
-        f"Competencies discussed so far: "
-        f"{[c.value for c in self.state.competencies_covered]} | "
-        f"Stagnation level: {self.state.stagnation_counter}/3"
-    )
+            f"Tone: {tone_note} | "
+            f"Competencies discussed so far: "
+            f"{[c.value for c in self.state.competencies_covered]} | "
+            f"Stagnation level: {self.state.stagnation_counter}/3"
+        )
         supervisor_injection = f"\n[DIRECTOR]: {injection}" if injection else ""
         return self.SYSTEM_PROMPT.format(
-        state_context=state_context,
-        supervisor_injection=supervisor_injection
-    )
+            state_context=state_context,
+            supervisor_injection=supervisor_injection,
+            retrieved_context=retrieved_context
+        )
+
     COMPETENCY_KEYWORDS = {
-    CompetencyFlag.VISION: [
-        "vision", "tầm nhìn", "strategic", "chiến lược", "direction", "định hướng"
-    ],
-    CompetencyFlag.ENTREPRENEURSHIP: [
-        "entrepreneurship", "tinh thần khởi nghiệp", "innovation", 
-        "đổi mới", "risk", "rủi ro", "ownership"
-    ],
-    CompetencyFlag.PASSION: [
-        "passion", "đam mê", "commitment", "cam kết", 
-        "enthusiasm", "nhiệt huyết", "craft", "nghề"
-    ],
-    CompetencyFlag.TRUST: [
-        "trust", "tin tưởng", "transparency", "minh bạch", 
-        "integrity", "liêm chính", "reliability"
-    ],
-}
+        CompetencyFlag.VISION: [
+            "vision", "tầm nhìn", "strategic", "chiến lược", "direction", "định hướng"
+        ],
+        CompetencyFlag.ENTREPRENEURSHIP: [
+            "entrepreneurship", "tinh thần khởi nghiệp", "innovation", 
+            "đổi mới", "risk", "rủi ro", "ownership"
+        ],
+        CompetencyFlag.PASSION: [
+            "passion", "đam mê", "commitment", "cam kết", 
+            "enthusiasm", "nhiệt huyết", "craft", "nghề"
+        ],
+        CompetencyFlag.TRUST: [
+            "trust", "tin tưởng", "transparency", "minh bạch", 
+            "integrity", "liêm chính", "reliability"
+        ],
+    }
 
     def _update_state(self, user_message: str, response: str | None = None) -> None:
         msg = user_message.lower()
@@ -120,8 +133,8 @@ Current session state: {state_context}
             counter=self.state.stagnation_counter
         )
         self.state.stagnation_counter = (
-        self.state.stagnation_counter + 1 if is_stagnant else 0
-    )
+            self.state.stagnation_counter + 1 if is_stagnant else 0
+        )
         self.state.rapport_score = self.supervisor.score_rapport(
             user_message, self.state.rapport_score
         )
@@ -137,6 +150,20 @@ Current session state: {state_context}
         return flags
 
     def run(self, user_message: str) -> NPCResponse:
+        # 1. Semantic Router
+        intent = self.supervisor.classify_intent(user_message)
+        
+        # 2. Cache / Rule-based (Short-circuit for Low Intent)
+        if intent == "low_intent":
+            for kw, rule_resp in self.LOW_INTENT_RULES.items():
+                if kw in user_message.lower():
+                    return NPCResponse(
+                        assistant_message=rule_resp,
+                        state_update=self.state,
+                        safety_flags=self._check_safety(user_message)
+                    )
+
+        # 3. High Intent Flow (RAG + Large LLM)
         safety_flags = self._check_safety(user_message)
         injection = None
         if self.state.stagnation_counter >= 3:
@@ -146,7 +173,10 @@ Current session state: {state_context}
             )
             self.state.injection_fired = True
 
-        system_prompt = self._build_system_prompt(injection)
+        # RAG Layer: Retrieve context from documents
+        retrieved_context = rag_service.retrieve_context(user_message)
+        
+        system_prompt = self._build_system_prompt(injection, retrieved_context)
         history = self.memory.load_memory_variables({}).get("history", [])
 
         response = llm_call(

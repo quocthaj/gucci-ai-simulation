@@ -7,6 +7,24 @@ class SupervisorAgent:
     Uses lightweight LLM classification (Groq) to detect stagnation.
     """
 
+    def classify_intent(self, message: str) -> str:
+        """
+        Acts as the 'Semantic Router'.
+        Classifies message as 'low_intent' (greetings, small talk) or 'high_intent' (HR strategy).
+        """
+        prompt = f"""
+        Classify the following user message: "{message}"
+        Options:
+        - "low_intent": Greetings, simple thank you, basic acknowledgment, or total gibberish.
+        - "high_intent": Questions about HR, leadership, Gucci competencies, feedback systems, or organizational design.
+        
+        Answer ONLY with the category name.
+        """
+        result = call_groq(prompt).strip().lower()
+        if "high_intent" in result:
+            return "high_intent"
+        return "low_intent"
+
     def detect_stagnation(
         self, current_msg: str, last_topic: str, counter: int
     ) -> bool:
