@@ -2,6 +2,9 @@
 
 AI Co-Worker Engine cho Edtronaut Job Simulation Platform.
 Demo: Gucci Group CHRO NPC powered by Gemini 3 Flash + Groq Llama3.
+The prototype is deployed on Render. You can interact with the API directly via the interactive Swagger UI:
+* **Swagger UI / API Docs:** [👉 Click here to test the API](https://gucci-chro-agent.onrender.com/docs)
+* *(Note: As this is hosted on a free Render tier, the server may sleep after 15 minutes of inactivity. Please allow ~30-50 seconds for the initial "cold start" upon your first request).*
 
 ## Architecture
 
