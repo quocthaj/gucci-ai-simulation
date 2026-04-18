@@ -11,6 +11,7 @@ The prototype is deployed on Render. You can interact with the API directly via 
 - **Main Persona Agent**: Gemini 3 Flash Preview (1M context)
 - **Supervisor Agent**: Groq Llama3 8B (ultra-low latency)
 - **Framework**: FastAPI + LangChain Memory
+- **Deployment**: Render
 
 ## Setup
 
