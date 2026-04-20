@@ -25,7 +25,7 @@ User ──► FastAPI /chat
               │
               └──► CHROAgent (Groq llama-3.3-70b-versatile)
                       • Custom SlidingWindowMemory (k=6, no LangChain Memory)
-                      • RAG: Google text-embedding-004 + cosine similarity
+                      • RAG: Google  + cosine similarity
                       • Safety flag detection (comp_band_restricted, etc.)
                       • Persona: Gucci CHRO — warm, strategic, never breaks character
 ```
@@ -83,7 +83,7 @@ gucci-ai-simulation/
 │   └── services/
 │       ├── llm_service.py       # Gemini + Groq SDK clients (llm_call → call_groq_chat)
 │       ├── rag_service.py       # RAGService — index KB at startup, cosine similarity retrieval
-│       └── embedding.py         # Google text-embedding-004 wrapper
+│       └── embedding.py         # Google gemini-embedding-2-preview wrapper
 ├── data/
 │   └── knowledge_base/          # .txt files auto-indexed by RAGService on startup
 ├── fe/                          # React + Vite frontend (npm run dev → localhost:5173)
@@ -203,7 +203,7 @@ Set the following **Environment Variables** in Render dashboard:
 - `GROQ_CHAT_MODEL=llama-3.3-70b-versatile`
 - `GROQ_MODEL=llama-3.1-8b-instant`
 - `GROQ_TEMPERATURE=0.0`
-- `GOOGLE_EMBEDDING_MODEL=models/text-embedding-004`
+- `GOOGLE_EMBEDDING_MODEL=models/gemini-embedding-2-preview`
 
 > ⚠️ `sessions_dev.json` is ephemeral on Render's free tier — sessions reset on each deploy. For persistence, upgrade to a paid instance or integrate a Redis/PostgreSQL store.
 
@@ -216,7 +216,7 @@ Set the following **Environment Variables** in Render dashboard:
 | Backend | FastAPI + Uvicorn |
 | Main LLM | Groq `llama-3.3-70b-versatile` (Native SDK) |
 | Supervisor LLM | Groq `llama-3.1-8b-instant` (Native SDK) |
-| Embeddings | Google `text-embedding-004` (Native SDK) |
+| Embeddings | Google `gemini-embedding-2-preview` (Native SDK) |
 | Memory | Custom `SlidingWindowMemory` (no LangChain) |
 | Frontend | React + Vite |
 | Deployment | Render (free tier) |
