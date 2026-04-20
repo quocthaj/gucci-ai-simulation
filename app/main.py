@@ -1,12 +1,18 @@
 import json
 import os
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from app.core.agent import CHROAgent
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 SESSION_FILE = "sessions_dev.json"
+
+# ── Static files (React build) ──────────────────────────────────────────────
+DIST_DIR = Path(__file__).parent.parent / "fe" / "dist"
 
 def load_all_sessions():
     if os.path.exists(SESSION_FILE):
@@ -29,9 +35,10 @@ def save_all_sessions(sessions_dict):
 # Load initial sessions
 sessions: dict[str, CHROAgent] = load_all_sessions()
 
+# CORS — allow localhost for dev; on Render both FE and BE are same origin so not needed
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -50,10 +57,10 @@ def chat(req: ChatRequest):
         )
     agent = sessions[req.session_id]
     result = agent.run(req.user_message)
-    
+
     # Save after each interaction to persist state
     save_all_sessions(sessions)
-    
+
     return {
         "message": result.assistant_message,
         "state": {
@@ -66,3 +73,28 @@ def chat(req: ChatRequest):
         },
         "safety_flags": result.safety_flags
     }
+
+# ── Serve React SPA (must come AFTER API routes) ────────────────────────────
+if DIST_DIR.exists():
+    # Serve static assets (JS, CSS, images)
+    app.mount("/assets", StaticFiles(directory=DIST_DIR / "assets"), name="assets")
+
+    @app.get("/favicon.svg")
+    def favicon():
+        return FileResponse(DIST_DIR / "favicon.svg")
+
+    # Catch-all: serve index.html for any non-API route (SPA fallback)
+    @app.get("/{full_path:path}")
+    def serve_spa(full_path: str):
+        index = DIST_DIR / "index.html"
+        if index.exists():
+            return FileResponse(index)
+        return {"message": "Frontend not built. Run: cd fe && npm run build"}
+else:
+    @app.get("/")
+    def root():
+        return {
+            "message": "Gucci CHRO Agent API is running.",
+            "note": "Frontend not built. Run: cd fe && npm run build",
+            "docs": "/docs"
+        }

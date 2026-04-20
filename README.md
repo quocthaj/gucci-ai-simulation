@@ -174,13 +174,22 @@ npm run dev
 
 ---
 
-## Deployment (Render)
+## Deployment (Render) — Single Service Full-Stack
 
-The backend is deployed as a **Python Web Service** on Render.
+FastAPI serves **both** the API and the React frontend as static files from `fe/dist/`.
+No separate frontend hosting needed.
 
-**Build command:**
+```
+Render Web Service
+├── POST /chat          → CHROAgent (FastAPI)
+├── GET  /docs          → Swagger UI
+└── GET  /              → React SPA (fe/dist/index.html)
+    └── GET /assets/*   → JS, CSS bundles
+```
+
+**Build command** (installs Python deps + builds React):
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt && cd fe && npm install && npm run build
 ```
 
 **Start command:**
