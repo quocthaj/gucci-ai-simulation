@@ -5,3 +5,12 @@ agent_venv/
 __pycache__/
 *.pyc
 .DS_Store
+
+# Runtime / generated
+sessions_dev.json
+scratch/
+
+# Frontend
+fe/node_modules/
+fe/dist/
+fe/.env

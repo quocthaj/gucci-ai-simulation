@@ -1,63 +1,77 @@
+import json
 from app.core.schema import CompetencyFlag
-from app.services.llm_service import call_groq # Import Groq thay vì thư viện Toán
+from app.services.llm_service import call_groq
 
 class SupervisorAgent:
     """
     Invisible Director — monitors CHRO session.
-    Uses lightweight LLM classification (Groq) to detect stagnation.
+    Optimized for single-call session analysis to reduce latency.
     """
 
-    def classify_intent(self, message: str) -> str:
+    def analyze_session(self, current_msg: str, last_topic: str) -> dict:
         """
-        Acts as the 'Semantic Router'.
-        Classifies message as 'low_intent' (greetings, small talk) or 'high_intent' (HR strategy).
+        COMBINED 3-IN-1 ANALYSIS:
+        1. Classifies Intent (low/high)
+        2. Detects Stagnation (true/false)
+        3. Calculates Rapport Delta (float)
         """
         prompt = f"""
-        Classify the following user message: "{message}"
-        Options:
-        - "low_intent": Greetings, simple thank you, basic acknowledgment, or total gibberish.
-        - "high_intent": Questions about HR, leadership, Gucci competencies, feedback systems, or organizational design.
-        
-        Answer ONLY with the category name.
-        """
-        result = call_groq(prompt).strip().lower()
-        if "high_intent" in result:
-            return "high_intent"
-        return "low_intent"
+        Analyze this interaction for the Gucci CHRO Simulation.
+        Previous Topic: "{last_topic}"
+        New Message: "{current_msg}"
 
-    def detect_stagnation(
-        self, current_msg: str, last_topic: str, counter: int
-    ) -> bool:
-        if not last_topic:
-            return False
-            
-        # Nhờ Llama 3 trên Groq check siêu tốc
+        TASK:
+        1. Intent: Is this strategic HR/Leadership (high_intent) or just greeting/small talk (low_intent)?
+        2. Stagnation: Is the user repeating themselves or stuck in a loop with the same idea?
+        3. Rapport: Based on tone, did the rapport improve (+0.05), decline (-0.08), or stay neutral (0.0)?
+
+        Return ONLY a JSON object:
+        {{
+            "intent": "low_intent" | "high_intent",
+            "stagnant": true | false,
+            "rapport_delta": float
+        }}
+        """
+        try:
+            raw_result = call_groq(prompt).strip()
+            # Clean possible markdown
+            clean_result = raw_result.replace("```json", "").replace("```", "").strip()
+            return json.loads(clean_result)
+        except Exception:
+            # Safe Fallbacks
+            return {
+                "intent": "high_intent", 
+                "stagnant": False, 
+                "rapport_delta": 0.0
+            }
+
+    def verify_response_quality(self, assistant_msg: str, user_msg: str) -> dict:
+        """
+        Self-Correction: Checks if CHRO response is strategic and follows constraints.
+        """
         prompt = f"""
-        User's previous message: "{last_topic}"
-        User's current message: "{current_msg}"
-        Are they just repeating the exact same core idea without making progress? 
-        Answer ONLY with 'yes' or 'no'.
+        Evaluate the following CHRO response to a user query.
+        User Query: "{user_msg}"
+        CHRO Response: "{assistant_msg}"
+
+        Criteria:
+        1. NO HAND-HOLDING: Response should NOT provide a full solution. It should ask probing questions.
+        2. PERSONA: Tone should be warm but precise.
+        3. BRAND PROTECTION: Should mention or protect brand autonomy if applicable.
+        4. ENGAGEMENT: Must end with 1-2 probing questions.
+
+        If it fails, provide a brief 'feedback' for the CHRO to rewrite it.
+        Return ONLY a JSON object: {{"passed": true/false, "feedback": "string"}}
         """
-        result = call_groq(prompt).strip().lower()
-        return 'yes' in result
+        try:
+            result = call_groq(prompt).strip()
+            clean_result = result.replace("```json", "").replace("```", "").strip()
+            return json.loads(clean_result)
+        except:
+            return {"passed": True, "feedback": ""}
 
-    def score_rapport(self, user_message: str, current_score: float) -> float:
-        # Giữ nguyên logic tính điểm thái độ của ông
-        positive = ["agree", "great", "understood", "exactly", "thanks"]
-        negative = ["no", "wrong", "disagree", "that's not", "irrelevant"]
-        delta = 0.0
-        for w in positive:
-            if w in user_message.lower():
-                delta += 0.05
-        for w in negative:
-            if w in user_message.lower():
-                delta -= 0.08
-        return max(0.0, min(1.0, current_score + delta))
-
-    def generate_injection(
-        self, covered: list[CompetencyFlag], last_topic: str
-    ) -> str:
-        # Giữ nguyên logic tiêm kịch bản của ông
+    def generate_injection(self, covered: list[CompetencyFlag], last_topic: str) -> str:
+        """Naturally steer toward missing competencies."""
         missing = [c.value for c in CompetencyFlag if c not in covered]
         if missing:
             return (
@@ -65,3 +79,14 @@ class SupervisorAgent:
                 f"'{missing[0]}' competency. Stay in persona."
             )
         return "User is circling. Ask them to propose a concrete next step."
+
+    # Legacy methods kept for compatibility or internal fallback
+    def classify_intent(self, message: str) -> str:
+        return self.analyze_session(message, "")["intent"]
+    
+    def detect_stagnation(self, current_msg: str, last_topic: str, _counter: int) -> bool:
+        return self.analyze_session(current_msg, last_topic)["stagnant"]
+    
+    def score_rapport(self, user_message: str, current_score: float) -> float:
+        # We now use analyze_session for delta, but keep this for historical reasons
+        return current_score # Will be updated in Agent logic via delta

@@ -1,9 +1,40 @@
+import json
+import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from app.core.agent import CHROAgent
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
-sessions: dict[str, CHROAgent] = {}
+SESSION_FILE = "sessions_dev.json"
+
+def load_all_sessions():
+    if os.path.exists(SESSION_FILE):
+        try:
+            with open(SESSION_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return {sid: CHROAgent.from_dict(sdata) for sid, sdata in data.items()}
+        except Exception as e:
+            print(f"Error loading sessions: {e}")
+    return {}
+
+def save_all_sessions(sessions_dict):
+    try:
+        data = {sid: agent.to_dict() for sid, agent in sessions_dict.items()}
+        with open(SESSION_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error saving sessions: {e}")
+
+# Load initial sessions
+sessions: dict[str, CHROAgent] = load_all_sessions()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class ChatRequest(BaseModel):
     session_id: str
@@ -19,6 +50,10 @@ def chat(req: ChatRequest):
         )
     agent = sessions[req.session_id]
     result = agent.run(req.user_message)
+    
+    # Save after each interaction to persist state
+    save_all_sessions(sessions)
+    
     return {
         "message": result.assistant_message,
         "state": {
