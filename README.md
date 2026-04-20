@@ -5,7 +5,7 @@
 
 The prototype is deployed on Render. You can interact with the API directly via the interactive Swagger UI:
 
-- 🔗 **Swagger UI / API Docs:** [Click here to test the API](https://gucci-chro-agent.onrender.com/docs)
+- 🔗 **Demo:** [Click here to test the API](https://gucci-chro-agent.onrender.com)
 - *(Note: Hosted on a free Render tier — server may sleep after 15 minutes of inactivity. Allow ~30-50 seconds for cold start on first request.)*
 
 ---
@@ -34,7 +34,7 @@ User ──► FastAPI /chat
 |---|---|---|
 | **Main Agent Brain** | `groq/llama-3.3-70b-versatile` | Generates CHRO persona responses |
 | **Supervisor** | `groq/llama-3.1-8b-instant` | Intent, stagnation, rapport, quality check |
-| **Embeddings** | `google/text-embedding-004` | RAG knowledge base indexing & retrieval |
+| **Embeddings** | `google/gemini-embedding-2-preview` | RAG knowledge base indexing & retrieval |
 
 ---
 
@@ -135,16 +135,16 @@ npm run dev
 |---|---|
 | `GOOGLE_API_KEY` | Google AI Studio API key (for embeddings) |
 | `GROQ_API_KEY` | Groq API key (for main agent + supervisor) |
-| `GEMINI_MODEL` | Gemini model name (fallback — default: `gemini-1.5-flash`) |
+| `GEMINI_MODEL` | Gemini model name (fallback — default: `gemini-3-flash-preview`) |
 | `GROQ_MODEL` | Groq model for supervisor (default: `llama-3.1-8b-instant`) |
 | `GROQ_CHAT_MODEL` | Groq model for main agent (default: `llama-3.3-70b-versatile`) |
 | `GROQ_TEMPERATURE` | Supervisor temperature (default: `0.0`) |
-| `GOOGLE_EMBEDDING_MODEL` | Embedding model (default: `models/text-embedding-004`) |
+| `GOOGLE_EMBEDDING_MODEL` | Embedding model (default: `models/gemini-embedding-2-preview`) |
 
 ---
 
 ## API Reference
-
+**Demo:** [Click here to test the API](https://gucci-chro-agent.onrender.com/docs)
 ### `POST /chat`
 
 **Request:**
