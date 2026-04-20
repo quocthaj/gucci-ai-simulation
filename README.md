@@ -5,7 +5,7 @@
 
 The prototype is deployed on Render. You can interact with the API directly via the interactive Swagger UI:
 
-- 🔗 **Demo:** [Click here to test the API](https://gucci-chro-agent.onrender.com)
+- 🔗 **Demo:** [Click here to test the web](https://gucci-chro-agent.onrender.com)
 - *(Note: Hosted on a free Render tier — server may sleep after 15 minutes of inactivity. Allow ~30-50 seconds for cold start on first request.)*
 
 ---
